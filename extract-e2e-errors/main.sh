@@ -17,7 +17,7 @@ REPO="garoon-private/garoon"
 # Available options
 TEST_TYPES=("all" "js-api" "rest-api" "soap-api" "acceptance" "mobile")
 ENVIRONMENTS=("all" "cloud" "on-premises" "cloud-for-neco")
-APPLICATIONS=("all" "schedule" "workflow" "mail" "message" "bulletin" "board" "cabinet" "report" "phone" "space" "timecard" "presence" "notification" "portal" "address" "system")
+APPLICATIONS=("all" "schedule" "workflow" "mail" "message" "bulletin" "board" "cabinet" "report" "phone" "space" "timecard" "presence" "notification" "portal" "address" "system" "others")
 
 # Helper function to display menu and get selection
 select_option() {
@@ -226,22 +226,35 @@ echo "=== Total: $total failed tests ==="
 echo ""
 echo "=== Failures by Application ==="
 
-apps="schedule workflow mail message bulletin board cabinet report phone space timecard presence notification portal address system"
+# Known apps list
+known_apps="schedule workflow mail message bulletin board cabinet report phone space timecard presence notification portal address system"
+known_apps_regex=$(echo "$known_apps" | tr ' ' '|')
 
-for app in $apps; do
+for app in $known_apps others; do
+  # Skip if filtering by specific app that's not this one
   if [ -n "$APPLICATION" ] && [ "$APPLICATION" != "$app" ]; then
     continue
   fi
 
-  count=$(grep -c "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" 2>/dev/null | tr -d '[:space:]' || echo "0")
+  if [ "$app" = "others" ]; then
+    count=$(grep -cvE "\\|(${known_apps_regex})/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" 2>/dev/null | tr -d '[:space:]' || echo "0")
+  else
+    count=$(grep -c "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" 2>/dev/null | tr -d '[:space:]' || echo "0")
+  fi
   [ -z "$count" ] && count=0
 
   if [ "$count" -gt 0 ]; then
     echo ""
     echo "[$app] $count tests:"
-    grep "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" | while IFS='|' read -r container path; do
-      printf "  %-35s %s\n" "$container" "$path"
-    done | head -30
+    if [ "$app" = "others" ]; then
+      grep -vE "\\|(${known_apps_regex})/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" | while IFS='|' read -r container path; do
+        printf "  %-35s %s\n" "$container" "$path"
+      done | head -30
+    else
+      grep "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" | while IFS='|' read -r container path; do
+        printf "  %-35s %s\n" "$container" "$path"
+      done | head -30
+    fi
     if [ "$count" -gt 30 ]; then
       echo "  ... and $((count - 30)) more"
     fi
@@ -274,20 +287,33 @@ summary_file="$OUTPUT_DIR/summary.txt"
   echo "Format: CONTAINER | TEST_PATH"
   echo ""
 
-  for app in $apps; do
+  known_apps_regex=$(echo "$known_apps" | tr ' ' '|')
+  
+  for app in $known_apps others; do
+    # Skip if filtering by specific app that's not this one
     if [ -n "$APPLICATION" ] && [ "$APPLICATION" != "$app" ]; then
       continue
     fi
 
-    count=$(grep -c "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" 2>/dev/null | tr -d '[:space:]' || echo "0")
+    if [ "$app" = "others" ]; then
+      count=$(grep -cvE "\\|(${known_apps_regex})/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" 2>/dev/null | tr -d '[:space:]' || echo "0")
+    else
+      count=$(grep -c "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" 2>/dev/null | tr -d '[:space:]' || echo "0")
+    fi
     [ -z "$count" ] && count=0
 
     if [ "$count" -gt 0 ]; then
       echo ""
       echo "=== [$app] $count tests ==="
-      grep "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" | while IFS='|' read -r container path; do
-        printf "%-35s %s\n" "$container" "$path"
-      done
+      if [ "$app" = "others" ]; then
+        grep -vE "\\|(${known_apps_regex})/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" | while IFS='|' read -r container path; do
+          printf "%-35s %s\n" "$container" "$path"
+        done
+      else
+        grep "|$app/" "$OUTPUT_DIR/all-failed-tests-with-container.txt" | while IFS='|' read -r container path; do
+          printf "%-35s %s\n" "$container" "$path"
+        done
+      fi
     fi
   done
 } > "$summary_file"
