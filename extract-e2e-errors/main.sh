@@ -1,16 +1,16 @@
 #!/bin/bash
 # Extract E2E test errors from GitHub Actions run
-# Usage: ./extract-e2e-errors.sh [RUN_ID] [TEST_TYPE] [APPLICATION] [ENVIRONMENT] [ATTEMPT]
+# Usage: ./main.sh <RUN_ID> [ATTEMPT] [TEST_TYPE] [APPLICATION] [ENVIRONMENT]
 # 
 # Interactive mode: Run without arguments to get prompted for each option
 # Non-interactive: Pass arguments directly
 #
 # Examples:
-#   ./extract-e2e-errors.sh                                       # interactive mode
-#   ./extract-e2e-errors.sh 21502793220                           # all failures (latest attempt)
-#   ./extract-e2e-errors.sh 21502793220 js-api                    # js-api only
-#   ./extract-e2e-errors.sh 21502793220 js-api schedule           # js-api schedule app
-#   ./extract-e2e-errors.sh 21502793220 all all all 2             # attempt 2
+#   ./main.sh                                # interactive mode
+#   ./main.sh 21502793220                    # all failures (latest attempt)
+#   ./main.sh 21502793220 2                  # all failures from attempt 2
+#   ./main.sh 21502793220 2 js-api           # js-api from attempt 2
+#   ./main.sh 21502793220 "" js-api schedule # js-api schedule (latest attempt)
 
 REPO="garoon-private/garoon"
 
@@ -88,28 +88,29 @@ if [ $# -eq 0 ]; then
 else
   # Non-interactive mode - use command line arguments
   RUN_ID="${1:-}"
-  TEST_TYPE="${2:-}"   # js-api, rest-api, soap-api, acceptance, mobile
-  APPLICATION="${3:-}" # schedule, workflow, mail, message, etc.
-  ENVIRONMENT="${4:-}" # cloud, on-premises, cloud-for-neco
-  ATTEMPT="${5:-}"     # attempt number (1, 2, 3, etc.)
+  ATTEMPT="${2:-}"     # attempt number (1, 2, 3, etc.)
+  TEST_TYPE="${3:-}"   # js-api, rest-api, soap-api, acceptance, mobile
+  APPLICATION="${4:-}" # schedule, workflow, mail, message, etc.
+  ENVIRONMENT="${5:-}" # cloud, on-premises, cloud-for-neco
   
   if [ -z "$RUN_ID" ]; then
-    echo "Usage: $0 [RUN_ID] [TEST_TYPE] [APPLICATION] [ENVIRONMENT] [ATTEMPT]"
+    echo "Usage: $0 <RUN_ID> [ATTEMPT] [TEST_TYPE] [APPLICATION] [ENVIRONMENT]"
     echo ""
     echo "Run without arguments for interactive mode."
     echo ""
+    echo "ATTEMPT:     attempt number (1, 2, 3...) or empty for latest"
     echo "TEST_TYPE:   js-api, rest-api, soap-api, acceptance, mobile (or 'all')"
     echo "APPLICATION: schedule, workflow, mail, message, bulletin, board, cabinet,"
-    echo "             report, phone, space, timecard, presence, notification, portal (or 'all')"
+    echo "             report, phone, space, timecard, presence, notification, portal, others (or 'all')"
     echo "ENVIRONMENT: cloud, on-premises, cloud-for-neco (or 'all')"
-    echo "ATTEMPT:     attempt number (1, 2, 3...) or empty for latest"
     echo ""
     echo "Examples:"
     echo "  $0                             # interactive mode"
     echo "  $0 12345                       # all failures (latest attempt)"
-    echo "  $0 12345 js-api                # js-api all apps all envs"
-    echo "  $0 12345 js-api schedule       # js-api schedule all envs"
-    echo "  $0 12345 all all all 2         # attempt 2, all filters"
+    echo "  $0 12345 2                     # all failures from attempt 2"
+    echo "  $0 12345 2 js-api              # js-api from attempt 2"
+    echo "  $0 12345 \"\" js-api             # js-api from latest attempt"
+    echo "  $0 12345 1 js-api schedule     # js-api schedule from attempt 1"
     exit 1
   fi
   
